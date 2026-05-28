@@ -1,0 +1,21 @@
+node_modules/
+.logs/
+*.log
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Local environment
+.env
+.env.local
+.env.*.local
+
+# Claude / Cursor / tooling
+.claude/
+.mcp.json
