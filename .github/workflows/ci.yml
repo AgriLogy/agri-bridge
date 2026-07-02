@@ -1,5 +1,7 @@
 name: CI
 
+# Thin caller into the org-shared Node test gate (npm ci + npm test).
+
 on:
   pull_request:
   push:
@@ -10,19 +12,6 @@ permissions:
 
 jobs:
   test:
-    name: Node test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Vitest
-        run: npm test
+    uses: AgriLogy/shared-workflows/.github/workflows/node-test.yml@v1
+    with:
+      node_version: "20"
