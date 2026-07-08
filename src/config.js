@@ -28,4 +28,16 @@ export const config = Object.freeze({
 
   // Optional shared-secret auth (TODO: enforce when set; follow-up PR)
   sharedSecret: process.env.AGRI_BRIDGE_SHARED_SECRET ?? null,
+
+  // MQTT publish — an ADDITIONAL delivery channel alongside the HTTP forward.
+  // When MQTT_URL is set, each accepted uplink is ALSO published (best-effort,
+  // fire-and-forget) to `${mqttTopicPrefix}/${user}/bivocom`, where agri-api's
+  // fastapp.mqtt subscriber consumes it. Unset MQTT_URL → disabled (the bridge
+  // behaves exactly as before: HTTP only). The topic body is the SAME Bivocom
+  // payload the HTTP path sends, so the two channels are interchangeable.
+  mqttUrl: process.env.MQTT_URL ?? null,
+  mqttUsername: process.env.MQTT_USERNAME ?? null,
+  mqttPassword: process.env.MQTT_PASSWORD ?? null,
+  mqttTopicPrefix: process.env.MQTT_TOPIC_PREFIX ?? "agrilogy",
+  mqttQos: Number(process.env.MQTT_QOS ?? 1),
 });

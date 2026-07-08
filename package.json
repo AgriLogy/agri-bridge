@@ -13,11 +13,13 @@
   },
   "dependencies": {
     "express": "^4.19.2",
+    "mqtt": "^5.15.2",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "aedes": "^0.51.3",
     "supertest": "^7.0.0",
     "vitest": "^2.1.4"
   },

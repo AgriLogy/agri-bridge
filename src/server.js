@@ -22,10 +22,22 @@ import { config } from "./config.js";
 import { router0xPayload } from "./schema.js";
 import { toBivocomUplink } from "./transform.js";
 import { forwardToBackend } from "./forward.js";
+import { createMqttPublisher } from "./mqtt.js";
 
 const log = pino({ level: config.logLevel });
 
-export function createApp() {
+// Lazily-created, process-wide MQTT publisher (no-op when MQTT_URL is unset).
+// Tests inject their own via createApp({ publisher }) so no broker is needed.
+let _defaultPublisher = null;
+function getDefaultPublisher() {
+  if (_defaultPublisher === null) {
+    _defaultPublisher = createMqttPublisher(config, log);
+  }
+  return _defaultPublisher;
+}
+
+export function createApp({ publisher } = {}) {
+  const pub = publisher ?? getDefaultPublisher();
   const app = express();
   app.use(express.json({ limit: "256kb" }));
   app.use(pinoHttp({ logger: log }));
@@ -71,6 +83,12 @@ export function createApp() {
       "router0x.accepted"
     );
 
+    // Additive MQTT channel: publish the SAME payload to
+    // `${prefix}/${user}/bivocom` (best-effort, fire-and-forget). Never awaited
+    // and never affects the HTTP response — the HTTP forward below still owns
+    // the 202/502 contract. No-op when MQTT is not configured.
+    pub.publish(parsed.data.user, bivocom);
+
     const result = await forwardToBackend(bivocom);
     if (result.ok) {
       req.log.info(
@@ -111,11 +129,26 @@ export function createApp() {
 
 // Auto-start unless we're being imported by tests
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const app = createApp();
-  app.listen(config.port, config.bindHost, () => {
+  const publisher = getDefaultPublisher();
+  const app = createApp({ publisher });
+  const server = app.listen(config.port, config.bindHost, () => {
     log.info(
-      { port: config.port, host: config.bindHost, backend: `${config.backendUrl}${config.backendPath}` },
+      {
+        port: config.port,
+        host: config.bindHost,
+        backend: `${config.backendUrl}${config.backendPath}`,
+        mqtt: publisher.enabled ? config.mqttUrl : "disabled",
+      },
       "agri-bridge listening"
     );
   });
+
+  const shutdown = (signal) => {
+    log.info({ signal }, "agri-bridge shutting down");
+    server.close(() => {
+      publisher.close().finally(() => process.exit(0));
+    });
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
