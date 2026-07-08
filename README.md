@@ -4,9 +4,16 @@ HTTP ingest gateway. Translates Router0X-format payloads from field
 devices into the Bivocom v1 wire format and forwards to `agri-api`.
 
 ```
-device → POST :9090/    →  agri-bridge  →  POST :8000/api/v1/bivocom/uplink
-                            (translate)      (pydantic-validated)
+device → POST :9090/  →  agri-bridge  ┬→ POST :8000/api/v1/bivocom/uplink   (HTTP)
+                          (translate)  └→ MQTT agrilogy/{user}/bivocom       (optional)
 ```
+
+The bridge forwards every accepted uplink over **HTTP** (always) and, when
+`MQTT_URL` is set, **also publishes** the same payload over **MQTT** — an
+additive second channel that `agri-api`'s `fastapp.mqtt` subscriber consumes.
+The MQTT publish is best-effort (fire-and-forget) and never affects the HTTP
+`202`/`502` response. Leave `MQTT_URL` unset and the bridge is HTTP-only,
+exactly as before.
 
 ## Endpoints
 
@@ -71,6 +78,23 @@ Validated by `agri-api`'s pydantic `BivocomUplink` schema.
 | `RETRY_ATTEMPTS` | `3` | total attempts (1 + 2 retries) |
 | `RETRY_BACKOFF_MS` | `100,500,2000` | backoff schedule (ms between retries) |
 | `LOG_LEVEL` | `info` | pino log level |
+| `MQTT_URL` | _(unset)_ | MQTT broker URL (e.g. `mqtt://mosquitto:1883`). **Unset = MQTT disabled** (HTTP only). |
+| `MQTT_USERNAME` | _(unset)_ | MQTT broker username, if the broker requires auth |
+| `MQTT_PASSWORD` | _(unset)_ | MQTT broker password |
+| `MQTT_TOPIC_PREFIX` | `agrilogy` | publish topic is `{prefix}/{user}/bivocom` |
+| `MQTT_QOS` | `1` | publish QoS |
+
+### MQTT channel
+
+When `MQTT_URL` is set, each accepted uplink is also published to
+`{MQTT_TOPIC_PREFIX}/{user}/bivocom` with the **same** Bivocom body shown above.
+`agri-api`'s `fastapp.mqtt` subscriber (topic `agrilogy/+/bivocom`) derives the
+client from the topic and writes the tags through the same ingest handlers the
+HTTP webhook uses — so the two channels are interchangeable. In production point
+`MQTT_URL` at ChirpStack's broker. Best-effort: MQTT.js queues while the broker
+is briefly unreachable; a hard failure is logged and dropped, never failing the
+HTTP request. Users containing the topic metacharacters `/ + #` skip the MQTT
+channel (HTTP still forwards).
 
 ## Tests
 
