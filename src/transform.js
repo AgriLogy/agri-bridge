@@ -1,6 +1,6 @@
 /**
  * Translate a Router0X-format payload into the Bivocom v1 wire format
- * accepted by agri-api's POST /api/v1/bivocom/uplink endpoint.
+ * accepted by agri-api's POST /ingest/bivocom endpoint (FastAPI sidecar).
  *
  * Router0X → Bivocom v1 mapping:
  *   user         → device_id = `router-user-${user}`

@@ -14,7 +14,7 @@ Bivocom / Router0X field router
   └─ POST http://<bridge-host>:9090/         (or /uplink — same handler, src/server.js)
        │  zod-validated by src/schema.js, mapped by src/transform.js
        ├─ HTTP (always)  POST ${BACKEND_URL}${BACKEND_PATH}
-       │                 default → http://agri-api-web:8000/api/v1/bivocom/uplink
+       │                 default → http://agri-api-fast:8001/ingest/bivocom
        │                 retry/backoff in src/forward.js → 202 / 400 / 502
        └─ MQTT (only when MQTT_URL is set, best-effort, fire-and-forget)
                          topic ${MQTT_TOPIC_PREFIX}/{user}/bivocom  (default prefix `agrilogy`)
@@ -57,8 +57,8 @@ npm test
 |---|---|---|
 | `PORT` | `9090` | HTTP bind port |
 | `BIND_HOST` | `0.0.0.0` | HTTP bind host |
-| `BACKEND_URL` | `http://agri-api-web:8000` | `agri-api` base URL |
-| `BACKEND_PATH` | `/api/v1/bivocom/uplink` | ingest path on `agri-api` |
+| `BACKEND_URL` | `http://agri-api-fast:8001` | `agri-api` base URL (FastAPI sidecar) |
+| `BACKEND_PATH` | `/ingest/bivocom` | ingest path on `agri-api` |
 | `BACKEND_TIMEOUT_MS` | `8000` | per-attempt timeout |
 | `RETRY_ATTEMPTS` | `3` | total attempts (1 + 2 retries) |
 | `RETRY_BACKOFF_MS` | `100,500,2000` | comma-separated backoff schedule |
@@ -194,7 +194,7 @@ The backend receives `{"device_id":"router-user-user1","timestamp":"2025-03-15 0
   runs as the non-root `node` user, `CMD ["node", "src/server.js"]`.
 - **Deployment**: the service is composed from the sibling `agri-api` repo — `docker-compose.yml`
   builds `context: ../agri-bridge`, `container_name: agri-bridge`, publishes `9090:9090`, sets
-  `PORT/BACKEND_URL/BACKEND_PATH/LOG_LEVEL`, and `depends_on: agri-api-web (service_healthy)`.
+  `PORT/BACKEND_URL/BACKEND_PATH/LOG_LEVEL`, and `depends_on: agri-api-fast (service_healthy)`.
   There is **no release/publish workflow in this repo** — no semantic-release, no registry push.
 
 ## Gotchas
@@ -210,7 +210,7 @@ The backend receives `{"device_id":"router-user-user1","timestamp":"2025-03-15 0
 - **`4xx` from the backend is not retried** — it means our transform produced an invalid payload; the
   bridge still answers `502` so the bug is visible.
 - **`AGRI_BRIDGE_SHARED_SECRET` / `X-Agri-Token` auth is not implemented yet** — it must land on the
-  bridge and on `agri-api`'s `/api/v1/bivocom/uplink` in the same change.
+  bridge and on `agri-api`'s `/ingest/bivocom` in the same change.
 - **Stale doc**: `README.md`'s test snippet still says `cd Devops/server` — that path no longer exists;
   run npm from the repo root.
 - `.claude/COMMON_MISTAKES.md`, `QUICK_START.md` and `ARCHITECTURE_MAP.md` are unfilled templates

@@ -12,8 +12,8 @@ export const config = Object.freeze({
   port: Number(process.env.PORT ?? 9090),
 
   // Backend (agri-api) — where we forward translated payloads
-  backendUrl: process.env.BACKEND_URL ?? "http://agri-api-web:8000",
-  backendPath: process.env.BACKEND_PATH ?? "/api/v1/bivocom/uplink",
+  backendUrl: process.env.BACKEND_URL ?? "http://agri-api-fast:8001",
+  backendPath: process.env.BACKEND_PATH ?? "/ingest/bivocom",
   backendTimeoutMs: Number(process.env.BACKEND_TIMEOUT_MS ?? 8000),
 
   // Retry policy on transient backend failures
