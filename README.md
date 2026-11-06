@@ -4,7 +4,7 @@ HTTP ingest gateway. Translates Router0X-format payloads from field
 devices into the Bivocom v1 wire format and forwards to `agri-api`.
 
 ```
-device → POST :9090/  →  agri-bridge  ┬→ POST :8000/api/v1/bivocom/uplink   (HTTP)
+device → POST :9090/  →  agri-bridge  ┬→ POST :8001/ingest/bivocom          (HTTP)
                           (translate)  └→ MQTT agrilogy/{user}/bivocom       (optional)
 ```
 
@@ -72,8 +72,8 @@ Validated by `agri-api`'s pydantic `BivocomUplink` schema.
 |---|---|---|
 | `PORT` | `9090` | HTTP bind port |
 | `BIND_HOST` | `0.0.0.0` | HTTP bind host |
-| `BACKEND_URL` | `http://agri-api-web:8000` | agri-api base URL |
-| `BACKEND_PATH` | `/api/v1/bivocom/uplink` | agri-api ingest path |
+| `BACKEND_URL` | `http://agri-api-fast:8001` | agri-api base URL (FastAPI sidecar) |
+| `BACKEND_PATH` | `/ingest/bivocom` | agri-api ingest path |
 | `BACKEND_TIMEOUT_MS` | `8000` | per-attempt timeout |
 | `RETRY_ATTEMPTS` | `3` | total attempts (1 + 2 retries) |
 | `RETRY_BACKOFF_MS` | `100,500,2000` | backoff schedule (ms between retries) |
@@ -115,4 +115,4 @@ exercise the Express app with a stubbed backend via `vi.spyOn` on `fetch`.
   `agri-api`) is the source of truth and the bridge is stateless.
 - **No shared-secret auth** yet — a `X-Agri-Token` header check is queued
   for a follow-up PR (will be enforced on both bridge and the
-  `/api/v1/bivocom/uplink` endpoint together).
+  `/ingest/bivocom` endpoint together).

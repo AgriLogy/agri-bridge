@@ -4,7 +4,7 @@ Quick-start guide for Claude Code. **Read this in full; everything else is on-de
 
 ## What this repo is
 
-The Agrilogy HTTP ingest gateway. A stateless Node.js / Express service that listens on **port 9090**, translates Router0X-format payloads from field devices into the Bivocom v1 wire format, and forwards to `agri-api`'s `/api/v1/bivocom/uplink` endpoint.
+The Agrilogy HTTP ingest gateway. A stateless Node.js / Express service that listens on **port 9090**, translates Router0X-format payloads from field devices into the Bivocom v1 wire format, and forwards to `agri-api`'s `/ingest/bivocom` endpoint (FastAPI sidecar, `agri-api-fast:8001`).
 
 No persistence here — Postgres (via agri-api) is the source of truth.
 
