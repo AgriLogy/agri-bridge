@@ -1,28 +1,22 @@
 name: CI
 
+# npm ci + npm test (vitest) on Node 20 via the shared node-test workflow.
+# Thin caller — the logic lives in AgriLogy/shared-workflows.
+
 on:
   pull_request:
   push:
     branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   test:
-    name: Node test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Vitest
-        run: npm test
+    uses: AgriLogy/shared-workflows/.github/workflows/node-test.yml@v1
+    with:
+      node_version: "20"

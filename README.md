@@ -99,8 +99,7 @@ channel (HTTP still forwards).
 ## Tests
 
 ```bash
-cd Devops/server
-npm install
+npm ci
 npm test           # vitest, runs unit + integration tests
 npm run test:watch
 ```
