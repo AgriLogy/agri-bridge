@@ -15,6 +15,9 @@ export const config = Object.freeze({
   backendUrl: process.env.BACKEND_URL ?? "http://agri-api-fast:8001",
   backendPath: process.env.BACKEND_PATH ?? "/ingest/bivocom",
   backendTimeoutMs: Number(process.env.BACKEND_TIMEOUT_MS ?? 8000),
+  // Shared secret agri-api checks on /ingest/* (its INGEST_TOKEN). Sent as
+  // the X-Ingest-Token header when set; unset → no header (open ingest).
+  ingestToken: process.env.INGEST_TOKEN || null,
 
   // Retry policy on transient backend failures
   retryAttempts: Number(process.env.RETRY_ATTEMPTS ?? 3),
