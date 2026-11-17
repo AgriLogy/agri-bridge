@@ -27,13 +27,16 @@ async function sleep(ms) {
  * One POST attempt with timeout.
  * @returns {Promise<{ok: boolean, status: number, body: string, transient: boolean}>}
  */
-async function attempt(url, payload, timeoutMs) {
+async function attempt(url, payload, timeoutMs, ingestToken) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(ingestToken ? { "X-Ingest-Token": ingestToken } : {}),
+      },
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
@@ -65,6 +68,7 @@ async function attempt(url, payload, timeoutMs) {
  * @param {string} [opts.url] override config (mainly for tests)
  * @param {number[]} [opts.backoff] override config (mainly for tests)
  * @param {number} [opts.timeoutMs] override config
+ * @param {string|null} [opts.ingestToken] override config (X-Ingest-Token)
  * @returns {Promise<{ok: boolean, status: number, body: string, attempts: number}>}
  */
 export async function forwardToBackend(bivocomPayload, opts = {}) {
@@ -73,6 +77,8 @@ export async function forwardToBackend(bivocomPayload, opts = {}) {
   const backoff =
     opts.backoff ?? config.retryBackoffMs.slice(0, config.retryAttempts - 1);
   const timeoutMs = opts.timeoutMs ?? config.backendTimeoutMs;
+  const ingestToken =
+    opts.ingestToken !== undefined ? opts.ingestToken : config.ingestToken;
 
   let attemptCount = 0;
   let last = null;
@@ -80,7 +86,7 @@ export async function forwardToBackend(bivocomPayload, opts = {}) {
   // First attempt + up to backoff.length retries
   for (let i = 0; i <= backoff.length; i++) {
     attemptCount++;
-    last = await attempt(url, bivocomPayload, timeoutMs);
+    last = await attempt(url, bivocomPayload, timeoutMs, ingestToken);
     if (last.ok) {
       return { ...last, attempts: attemptCount };
     }

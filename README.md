@@ -75,6 +75,7 @@ Validated by `agri-api`'s pydantic `BivocomUplink` schema.
 | `BACKEND_URL` | `http://agri-api-fast:8001` | agri-api base URL (FastAPI sidecar) |
 | `BACKEND_PATH` | `/ingest/bivocom` | agri-api ingest path |
 | `BACKEND_TIMEOUT_MS` | `8000` | per-attempt timeout |
+| `INGEST_TOKEN` | — | shared secret sent as `X-Ingest-Token`; must equal agri-api's `INGEST_TOKEN` once that is set |
 | `RETRY_ATTEMPTS` | `3` | total attempts (1 + 2 retries) |
 | `RETRY_BACKOFF_MS` | `100,500,2000` | backoff schedule (ms between retries) |
 | `LOG_LEVEL` | `info` | pino log level |
