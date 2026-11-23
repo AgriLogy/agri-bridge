@@ -79,6 +79,8 @@ Validated by `agri-api`'s pydantic `BivocomUplink` schema.
 | `RETRY_ATTEMPTS` | `3` | total attempts (1 + 2 retries) |
 | `RETRY_BACKOFF_MS` | `100,500,2000` | backoff schedule (ms between retries) |
 | `LOG_LEVEL` | `info` | pino log level |
+| `LOG_BODY_MAX_CHARS` | `2048` | rejected (400) and malformed-JSON requests log the received body, capped at this length; `0` disables body logging |
+| `LOG_BODIES` | `false` | `true` also logs the body of accepted uplinks (noisy; debugging only) |
 | `MQTT_URL` | _(unset)_ | MQTT broker URL (e.g. `mqtt://mosquitto:1883`). **Unset = MQTT disabled** (HTTP only). |
 | `MQTT_USERNAME` | _(unset)_ | MQTT broker username, if the broker requires auth |
 | `MQTT_PASSWORD` | _(unset)_ | MQTT broker password |

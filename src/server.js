@@ -23,6 +23,7 @@ import { router0xPayload } from "./schema.js";
 import { toBivocomUplink } from "./transform.js";
 import { forwardToBackend } from "./forward.js";
 import { createMqttPublisher } from "./mqtt.js";
+import { previewBody } from "./trace.js";
 
 const log = pino({ level: config.logLevel });
 
@@ -36,11 +37,26 @@ function getDefaultPublisher() {
   return _defaultPublisher;
 }
 
-export function createApp({ publisher } = {}) {
+export function createApp({ publisher, logger = log, traceConfig = config } = {}) {
   const pub = publisher ?? getDefaultPublisher();
+  const maxChars = traceConfig.logBodyMaxChars;
   const app = express();
+  // pino-http first so body-parser failures below are logged with req context.
+  app.use(pinoHttp({ logger }));
   app.use(express.json({ limit: "256kb" }));
-  app.use(pinoHttp({ logger: log }));
+
+  // Malformed JSON: log what the device actually sent (body-parser exposes the
+  // raw text as err.body) and answer with the same JSON error envelope.
+  app.use((err, req, res, next) => {
+    if (err?.type !== "entity.parse.failed") return next(err);
+    req.log.warn(
+      { err: err.message, body: previewBody(err.body, maxChars) },
+      "router0x.malformed_json"
+    );
+    return res.status(400).json({
+      error: { code: "malformed_json", message: "Request body is not valid JSON" },
+    });
+  });
 
   app.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok" });
@@ -67,7 +83,10 @@ export function createApp({ publisher } = {}) {
   const ingestHandler = async (req, res) => {
     const parsed = router0xPayload.safeParse(req.body);
     if (!parsed.success) {
-      req.log.warn({ errors: parsed.error.errors }, "router0x.invalid");
+      req.log.warn(
+        { errors: parsed.error.errors, body: previewBody(req.body, maxChars) },
+        "router0x.invalid"
+      );
       return res.status(400).json({
         error: {
           code: "validation_error",
@@ -79,7 +98,11 @@ export function createApp({ publisher } = {}) {
 
     const bivocom = toBivocomUplink(parsed.data);
     req.log.info(
-      { device_id: bivocom.device_id, tag_count: Object.keys(bivocom.tags).length },
+      {
+        device_id: bivocom.device_id,
+        tag_count: Object.keys(bivocom.tags).length,
+        ...(traceConfig.logBodies ? { body: previewBody(req.body, maxChars) } : {}),
+      },
       "router0x.accepted"
     );
 

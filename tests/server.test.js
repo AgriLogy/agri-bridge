@@ -3,6 +3,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import pino from "pino";
 
 import { createApp } from "../src/server.js";
 
@@ -93,5 +94,50 @@ describe("POST /uplink (alias)", () => {
       .post("/uplink")
       .send({ user: "u1", temp: 23 });
     expect(res.status).toBe(202);
+  });
+});
+
+describe("body tracing in logs", () => {
+  /** Build an app whose pino logger writes JSON lines into `lines`. */
+  function tracedApp(traceConfig) {
+    const lines = [];
+    const logger = pino({ level: "info" }, { write: (s) => lines.push(JSON.parse(s)) });
+    const app = createApp({ logger, traceConfig });
+    return { app, find: (msg) => lines.find((l) => l.msg === msg) };
+  }
+
+  it("logs the received body when the payload is rejected", async () => {
+    const { app, find } = tracedApp({ logBodyMaxChars: 2048, logBodies: false });
+    const res = await request(app).post("/").send({ client: "abc", temp: 21.5 });
+    expect(res.status).toBe(400);
+    expect(find("router0x.invalid").body).toBe('{"client":"abc","temp":21.5}');
+  });
+
+  it("logs raw text and returns a JSON 400 on malformed JSON", async () => {
+    const { app, find } = tracedApp({ logBodyMaxChars: 2048, logBodies: false });
+    const res = await request(app)
+      .post("/")
+      .set("Content-Type", "application/json")
+      .send('{"user":"Router01",');
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("malformed_json");
+    expect(find("router0x.malformed_json").body).toBe('{"user":"Router01",');
+  });
+
+  it("omits the body when LOG_BODY_MAX_CHARS is 0", async () => {
+    const { app, find } = tracedApp({ logBodyMaxChars: 0, logBodies: false });
+    await request(app).post("/").send({ client: "abc" });
+    expect(find("router0x.invalid").body).toBeNull();
+  });
+
+  it("logs accepted bodies only when LOG_BODIES is on", async () => {
+    const payload = { user: "Router01", temp: 21.5 };
+    const off = tracedApp({ logBodyMaxChars: 2048, logBodies: false });
+    await request(off.app).post("/").send(payload);
+    expect(off.find("router0x.accepted").body).toBeUndefined();
+
+    const on = tracedApp({ logBodyMaxChars: 2048, logBodies: true });
+    await request(on.app).post("/").send(payload);
+    expect(on.find("router0x.accepted").body).toBe(JSON.stringify(payload));
   });
 });
