@@ -63,4 +63,27 @@ describe("Router0X zod schema", () => {
     expect(r.success).toBe(true);
     expect(r.data.brand_new_sensor).toBe(99.9);
   });
+
+  it("accepts `client` as an alias for `user` and drops it from the tags", () => {
+    const r = router0xPayload.safeParse({
+      client: "Router02",
+      wind_speed: 0,
+      temperature_weather: 23.8,
+    });
+    expect(r.success).toBe(true);
+    expect(r.data.user).toBe("Router02");
+    expect(r.data).not.toHaveProperty("client");
+    const uplink = toBivocomUplink(r.data);
+    expect(uplink.device_id).toBe("router-user-Router02");
+    expect(uplink.tags).toEqual({ wind_speed: 0, temperature_weather: 23.8 });
+  });
+
+  it("prefers `user` when both `user` and `client` are present", () => {
+    expect(router0xPayload.safeParse({ user: "Router01", client: 7 }).data.user).toBe("Router01");
+    expect(router0xPayload.safeParse({ user: "Router01", client: "x" }).success).toBe(false);
+  });
+
+  it("still rejects a payload with neither `user` nor `client`", () => {
+    expect(router0xPayload.safeParse({ temp: 1 }).success).toBe(false);
+  });
 });
