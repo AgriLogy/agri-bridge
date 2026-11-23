@@ -19,17 +19,33 @@
  *
  * Extra unknown keys are passed through — devices may add new sensor
  * types and we don't want to 400 on them.
+ *
+ * Some router firmware templates name the identity field `client` instead of
+ * `user` (e.g. `{"client":"Router02", ...}`). When `user` is absent, `client`
+ * is accepted as its alias and removed, so it never becomes a sensor tag.
+ * If both are present, `user` wins and `client` is validated like any other key.
  */
 import { z } from "zod";
 
 const finiteNumber = z.number().finite();
 
-export const router0xPayload = z
-  .object({
-    user: z.union([z.string().min(1), z.number()]).transform(String),
-    timestamp: z.string().min(1).optional(),
-  })
-  .catchall(finiteNumber);
+/** Move `client` → `user` when the payload has no `user` of its own. */
+function aliasClientToUser(raw) {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  if (raw.user !== undefined || raw.client === undefined) return raw;
+  const { client, ...rest } = raw;
+  return { ...rest, user: client };
+}
+
+export const router0xPayload = z.preprocess(
+  aliasClientToUser,
+  z
+    .object({
+      user: z.union([z.string().min(1), z.number()]).transform(String),
+      timestamp: z.string().min(1).optional(),
+    })
+    .catchall(finiteNumber)
+);
 
 /**
  * @typedef {z.infer<typeof router0xPayload>} Router0XPayload

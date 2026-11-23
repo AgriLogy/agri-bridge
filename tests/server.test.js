@@ -108,9 +108,9 @@ describe("body tracing in logs", () => {
 
   it("logs the received body when the payload is rejected", async () => {
     const { app, find } = tracedApp({ logBodyMaxChars: 2048, logBodies: false });
-    const res = await request(app).post("/").send({ client: "abc", temp: 21.5 });
+    const res = await request(app).post("/").send({ temp: "hot", wind: 2 });
     expect(res.status).toBe(400);
-    expect(find("router0x.invalid").body).toBe('{"client":"abc","temp":21.5}');
+    expect(find("router0x.invalid").body).toBe('{"temp":"hot","wind":2}');
   });
 
   it("logs raw text and returns a JSON 400 on malformed JSON", async () => {
@@ -126,7 +126,7 @@ describe("body tracing in logs", () => {
 
   it("omits the body when LOG_BODY_MAX_CHARS is 0", async () => {
     const { app, find } = tracedApp({ logBodyMaxChars: 0, logBodies: false });
-    await request(app).post("/").send({ client: "abc" });
+    await request(app).post("/").send({ temp: "hot" });
     expect(find("router0x.invalid").body).toBeNull();
   });
 
