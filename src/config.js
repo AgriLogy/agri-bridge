@@ -28,6 +28,11 @@ export const config = Object.freeze({
 
   // Logging
   logLevel: process.env.LOG_LEVEL ?? "info",
+  // Rejected (400) and malformed-JSON requests always log the received body,
+  // capped at this many chars; 0 disables body logging entirely.
+  logBodyMaxChars: Number(process.env.LOG_BODY_MAX_CHARS ?? 2048),
+  // Opt-in: also log the body of ACCEPTED uplinks (noisy; for debugging).
+  logBodies: process.env.LOG_BODIES === "true",
 
   // Optional shared-secret auth (TODO: enforce when set; follow-up PR)
   sharedSecret: process.env.AGRI_BRIDGE_SHARED_SECRET ?? null,
